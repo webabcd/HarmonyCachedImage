@@ -1,7 +1,7 @@
 {
   "name": "@webabcd/harmony-cachedimage",
   "version": "1.0.0",
-  "description": "",
+  "description": "为 Image 组件提供 http 或 https 地址的图片缓存能力",
   "homepage": "https://gitee.com/webabcd",
   "repository": "https://gitee.com/webabcd/HarmonyCachedImage",
   "main": "Index.ets",
