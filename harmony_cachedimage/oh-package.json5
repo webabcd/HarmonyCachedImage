@@ -1,0 +1,23 @@
+{
+  "name": "@webabcd/harmony-cachedimage",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://gitee.com/webabcd",
+  "repository": "https://gitee.com/webabcd/HarmonyCachedImage.git",
+  "main": "Index.ets",
+  "author": "webabcd",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@webabcd/harmony-utils": "^1.0.0"
+  },
+  "keywords": [
+    "缓存",
+    "图片",
+    "cached image"
+  ],
+  "tags": [
+    "缓存",
+    "图片",
+    "cached image"
+  ]
+}
