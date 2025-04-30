@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "homepage": "https://gitee.com/webabcd",
-  "repository": "https://gitee.com/webabcd/HarmonyCachedImage.git",
+  "repository": "https://gitee.com/webabcd/HarmonyCachedImage",
   "main": "Index.ets",
   "author": "webabcd",
   "license": "Apache-2.0",
