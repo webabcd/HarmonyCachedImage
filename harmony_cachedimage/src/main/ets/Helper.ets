@@ -72,4 +72,21 @@ export class Helper {
       fs.closeSync(file)
     })
   }
+
+  static request(url: string, callback: AsyncCallback<ArrayBuffer>) {
+
+    let httpRequest = http.createHttp()
+
+    httpRequest.request(
+      url,
+      {
+        method: http.RequestMethod.GET,
+        expectDataType: http.HttpDataType.ARRAY_BUFFER,
+      },
+      (err: BusinessError, data: http.HttpResponse) => {
+        callback(err, data.result as ArrayBuffer)
+        httpRequest.destroy()
+      }
+    );
+  }
 }

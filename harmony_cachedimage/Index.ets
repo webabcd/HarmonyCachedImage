@@ -1,1 +1,1 @@
-export { aci, cachedImage } from './src/main/ets/CachedImage'
+export { aci, pci, cachedImage } from './src/main/ets/CachedImage'

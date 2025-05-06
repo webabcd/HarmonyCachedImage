@@ -1,15 +1,26 @@
 import { fileIo as fs } from '@kit.CoreFileKit';
 import { Helper } from './Helper';
-import { PathHelper, CryptoHelper, log, model } from "@webabcd/harmony-utils";
+import { PathHelper, CryptoHelper, log, model, UrlHelper } from "@webabcd/harmony-utils";
+import { HttpRequest, HttpResponse, httpServer } from "@webabcd/harmony-httpserver";
 import { ArkTSUtils } from '@kit.ArkTS';
+import { BusinessError } from '@kit.BasicServicesKit';
 
 /**
  * 异步缓存图片
- * @param config 图片的 url
+ * @param url 图片的 url
  * @returns 如果缓存成功或缓存命中成功则返 file:// 开头的缓存地址，否则返回原 url
  */
 export async function aci(url: string): Promise<string> {
   return await CachedImage.getInstance().aci(url)
+}
+
+/**
+ * 代理缓存图片
+ * @param url 图片的 url
+ * @returns 返回图片的代理地址
+ */
+export function pci(url: string): string {
+  return CachedImage.getInstance().pci(url)
 }
 
 export interface Config {
@@ -35,6 +46,8 @@ class CachedImage {
     return CachedImage.cachedImage;
   }
 
+  port: number = -1
+
   config: Config = {} as Config
   /**
    * 初始化
@@ -52,6 +65,76 @@ class CachedImage {
       config.cacheSeconds = 86400
     }
     await Helper.removeFiles(config.cacheDirectory, new Date().getTime() - config.cacheSeconds * 1000)
+
+    httpServer.start(8080, (err, port) => {
+      this.port = port
+    })
+    httpServer.handleHttpRequestAsync((httpRequest:HttpRequest) => {
+      // 如果目录不存在则创建
+      fs.mkdir(this.config.cacheDirectory, true)
+
+      let url = `http://127.0.0.1:${this.port}${httpRequest.url}`
+      url = UrlHelper.query(url, "url")
+      url = UrlHelper.decode(url)
+
+      let urlMd5 = CryptoHelper.md5(url)
+      let filePath = PathHelper.join(this.config.cacheDirectory, urlMd5)
+
+      return new Promise(async (resolve, reject) => {
+        let httpResponse = { } as HttpResponse
+
+        let exist = await fs.access(filePath, fs.AccessModeType.EXIST)
+        if (exist) {
+          let fileInfo = await fs.stat(filePath)
+          if (fileInfo.size > 0) {
+            fs.utimes(filePath, new Date().getTime())
+
+            let inputStream = await fs.createStream(filePath, 'r+');
+            let buffer = new ArrayBuffer(fileInfo.size);
+            let readLength = await inputStream.read(buffer, {
+              offset: 0,
+              length: buffer.byteLength
+            });
+            await inputStream.close();
+
+            httpResponse.headers = {}
+            httpResponse.headers["Content-Type"] = 'image/png'
+            httpResponse.result = buffer
+
+            log.i(`缓存命中 ${filePath}`)
+
+            resolve(httpResponse)
+          } else {
+            exist = false
+          }
+        }
+
+        if (!exist) {
+          Helper.request(url, async (err, result) => {
+            let httpResponse = {} as HttpResponse
+            if (err) {
+              httpResponse.result = ''
+              httpResponse.statusCode = 404
+              resolve(httpResponse)
+            } else {
+              httpResponse.headers = {}
+              httpResponse.headers["Content-Type"] = httpRequest.headers["Content-Type"] ?? 'image/png'
+              httpResponse.result = result
+
+              let outputStream = await fs.createStream(filePath, "w+");
+              let writeLength = await outputStream.write(result, {
+                offset: 0,
+                length: result.byteLength,
+                encoding: "utf-8",
+              })
+              await outputStream.close();
+
+              resolve(httpResponse)
+            }
+          })
+        }
+      });
+    })
 
     log.i(`初始化完成 cacheDirectory:${config.cacheDirectory}, cacheSeconds:${config.cacheSeconds}, enableLog:${config.enableLog}`)
   }
@@ -98,6 +181,15 @@ class CachedImage {
         }
       })
     });
+  }
+
+  public pci(url: string): string {
+
+    if (this.port == -1) {
+      return url
+    }
+
+    return `http://127.0.0.1:${this.port}/?url=${UrlHelper.encode(url)}`
   }
 
   // <editor-fold desc='管理当前正在下载的任务'>

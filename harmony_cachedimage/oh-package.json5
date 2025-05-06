@@ -8,7 +8,8 @@
   "author": "webabcd",
   "license": "Apache-2.0",
   "dependencies": {
-    "@webabcd/harmony-utils": "^1.0.0"
+    "@webabcd/harmony-utils": "^1.0.1",
+    "@webabcd/harmony-httpserver": "^1.0.4"
   },
   "keywords": [
     "缓存",
