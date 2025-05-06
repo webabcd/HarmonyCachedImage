@@ -1,3 +1,7 @@
+/**
+ * 异步缓存图片的示例
+ */
+
 import { aci } from '@webabcd/harmony-cachedimage'
 
 @Entry
@@ -14,7 +18,7 @@ struct AsyncDemo {
 
     // 需要先要初始化，请参见 /entryability/EntryAbility.ets 中相关的初始化代码
 
-    // 异步缓存图片，如果缓存成功或缓存命中成功则返 file:// 开头的缓存地址，否则返回原 url
+    // 异步缓存图片，如果下载并缓存成功或缓存命中成功则返 file:// 开头的缓存地址，否则返回原 url
     this.imageUrl1 = await aci('https://www-file.huawei.com/-/media/corporate/images/home/logo/huawei_logo.png')
     this.imageUrl2 = await aci('https://cdn.deepseek.com/logo.png')
     this.imageUrl3 = await aci('https://xxx.xxx.xxx/logo.png')

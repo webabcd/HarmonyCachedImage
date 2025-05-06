@@ -3,7 +3,6 @@ import { Helper } from './Helper';
 import { PathHelper, CryptoHelper, log, model, UrlHelper } from "@webabcd/harmony-utils";
 import { HttpRequest, HttpResponse, httpServer } from "@webabcd/harmony-httpserver";
 import { ArkTSUtils } from '@kit.ArkTS';
-import { BusinessError } from '@kit.BasicServicesKit';
 
 /**
  * 异步缓存图片
@@ -66,6 +65,12 @@ class CachedImage {
     }
     await Helper.removeFiles(config.cacheDirectory, new Date().getTime() - config.cacheSeconds * 1000)
 
+    this.initHttpServer()
+
+    log.i(`初始化完成 cacheDirectory:${config.cacheDirectory}, cacheSeconds:${config.cacheSeconds}, enableLog:${config.enableLog}`)
+  }
+
+  private initHttpServer() {
     httpServer.start(8080, (err, port) => {
       this.port = port
     })
@@ -83,6 +88,7 @@ class CachedImage {
       return new Promise(async (resolve, reject) => {
         let httpResponse = { } as HttpResponse
 
+        // 如果缓存文件存在，则从缓存文件中读取数据
         let exist = await fs.access(filePath, fs.AccessModeType.EXIST)
         if (exist) {
           let fileInfo = await fs.stat(filePath)
@@ -105,16 +111,20 @@ class CachedImage {
 
             resolve(httpResponse)
           } else {
-            exist = false
+            exist = false // 如果文件大小为 0 则认为缓存文件不存在
           }
         }
 
+        // 如果缓存文件不存在，则下载并缓存
         if (!exist) {
+          log.i(`下载并缓存 ${url}`)
           Helper.request(url, async (err, result) => {
             let httpResponse = {} as HttpResponse
             if (err) {
               httpResponse.result = ''
               httpResponse.statusCode = 404
+
+              log.w(`下载并缓存失败 ${filePath}, errCode:${err.code}, errMessage:${err.message}`)
               resolve(httpResponse)
             } else {
               httpResponse.headers = {}
@@ -129,14 +139,13 @@ class CachedImage {
               })
               await outputStream.close();
 
+              log.i(`下载并缓存成功 ${filePath}`)
               resolve(httpResponse)
             }
           })
         }
       });
     })
-
-    log.i(`初始化完成 cacheDirectory:${config.cacheDirectory}, cacheSeconds:${config.cacheSeconds}, enableLog:${config.enableLog}`)
   }
 
   /**
@@ -158,6 +167,7 @@ class CachedImage {
     let urlMd5 = CryptoHelper.md5(url)
     let filePath = PathHelper.join(this.config.cacheDirectory, urlMd5)
 
+    // 如果缓存文件存在，则从缓存文件中读取数据
     let exist = await fs.access(filePath, fs.AccessModeType.EXIST)
     if (exist) {
       let fileInfo = await fs.stat(filePath)
@@ -169,14 +179,16 @@ class CachedImage {
       }
     }
 
+    // 如果缓存文件不存在，则下载并缓存
     return new Promise((resolve, reject) => {
+      log.i(`下载并缓存 ${url}`)
       Helper.download(url, filePath, async (error) => {
         await this.removeDownloading(url)
         if (error) {
-          log.w(`缓存失败 ${filePath}`)
+          log.w(`下载并缓存失败 ${filePath}, errCode:${error.code}, errMessage:${error.message}`)
           resolve(url);
         } else {
-          log.i(`缓存成功 ${filePath}`)
+          log.i(`下载并缓存成功 ${filePath}`)
           resolve("file://" + filePath);
         }
       })
@@ -184,8 +196,8 @@ class CachedImage {
   }
 
   public pci(url: string): string {
-
     if (this.port == -1) {
+      log.w(`本地 http server 未启动，无法通过代理的方式缓存图片`)
       return url
     }
 
